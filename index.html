@@ -349,7 +349,7 @@ function update_bullets(features) {
 function order_results() {
   var url = encode_selected();
   d3.json("get_results?"+url, function(err, data) {
-    d3.select("#numavail").text(data.count);
+    d3.select("#numavail").text(data.count + " verfügbar");
     var elems = d3.select("#results").selectAll("div").data(data.cars.slice(0, 10));
     var elems_enter = elems.enter().append("div");
     elems_enter.style("display", "inline");
