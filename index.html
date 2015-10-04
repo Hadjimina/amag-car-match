@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<title>amag car match</title>
+<style>
+  body {
+    background-color: #B0BDC2;
+    min-height: 100vh;
+    margin: 0px;
+  }
+  svg {
+    width: 80vw;
+    height: 500px;
+  }
+  #results {
+    background-color: gray;
+  }
+  
+  body.sport{
+    background-color: #701818;
+  }
+  #results.sport {
+      background-color: #5E5B5C;
+  }
+
+  body.van{
+    background-color: #EFC94C;
+  }
+  #results.van {
+      background-color: #334D5C;
+  }
+
+  body.family{
+    background-color: #4B87B8;
+  }
+  #results.family {
+      background-color: #4F5F7F;
+  }
+
+  body.offroader{
+    background-color: #6F7356;
+  }
+  #results.offroader {
+      background-color: #4F4131;
+  }
+</style>
+<script src="feature/d3.min.js" charset="utf-8"></script>
+</head>
+<body>
+<img src="feature/amag.png" />
+<svg style="width: 100vw;">
+  <!--<image xlink:href="feature/amag.png" width="396" height="152" style="right:0px;" />-->
+  <rect id="included" width="100%" height="300px" y="200px" fill="white" stroke="black">
+  </rect>
+  <text id="numavail" x="40" y="450" fill="black" style="font-size: 18px; font-family: sans; font-weight: bold;"></text>
+  <g id="available">
+  </g>
+  <!--<image xlink:href="feature/vw.svg"  />-->
+  <!--<image height="100pt" width="100pt" xlink:href="feature/audi.svg" />-->
+</svg>
+<div id="results">
+</div>
+<script>
+
+var selection = [];
+
+
+function encode_selected() {
+  var params = [];
+  for (var d in selection) {
+    params.push("feature=" + encodeURIComponent(selection[d]));
+  }
+  return params.join("&");
+}
+
+function change_backstyle(feature) {
+    if((feature == "sport" || feature == "van" || feature == "family" || feature == "offroader") == false) {
+        return;
+    }
+    
+    var bod = d3.select("body");
+    var res = d3.select("#results");
+    bod.classed("sport", false);
+    bod.classed("van", false);
+    bod.classed("family", false);
+    bod.classed("offroader", false);
+    res.classed("sport", false);
+    res.classed("van", false);
+    res.classed("family", false);
+    res.classed("offroader", false);
+    if(feature == "sport") {    
+        bod.classed("sport", true);
+        res.classed("sport", true);
+    } else if(feature == "van") {
+        bod.classed("van", true);
+        res.classed("van", true);
+    } else if(feature == "family") {
+        bod.classed("family", true);
+        res.classed("family", true);
+    } else if(feature == "offroader") {
+        bod.classed("offroader", true);
+        res.classed("offroader", true);
+    }
+}
+
+function no_children(superfeat) {
+    return superfeat.selectAll("g.child").empty();
+}
+
+function show_mode(feature, show_children) {
+  var superfeat = d3.select("#"+feature);
+
+  if(no_children(superfeat)) {
+    if(show_children == true) {
+      // get bigger when no children
+      superfeat.selectAll("circle.parent")
+        .transition().duration(400).attr("r", 125);
+    } else {
+      superfeat.selectAll("circle.parent")
+        .transition().duration(400).attr("r", 50);
+    }
+    return;
+  }
+
+  if(show_children == true) {
+    superfeat.selectAll("image.parent")
+      .transition().duration(400)
+      .style("opacity", 0);
+    superfeat.selectAll("circle.parent")
+      .transition().duration(400).attr("r", 120);
+      
+    superfeat.selectAll("g.child")
+      .classed("hidden", false)
+      .transition().delay(200)
+      .style("opacity", 1);
+  } else {
+    superfeat.selectAll("image.parent")
+      .transition().duration(200)
+      .style("opacity", 1);
+    superfeat.selectAll("circle.parent")
+      .transition().delay(25).duration(200).attr("r", "50px");
+      
+    superfeat.selectAll("g.child")
+      .classed("hidden", true)
+      .transition().duration(200)
+      .style("opacity", 0);
+  }
+}
+
+
+function reset_children_positions(children) {
+  cxfunc = function(d, i) { return (Math.cos(2*Math.PI/d.length*i + Math.PI) * 50) + "pt"; }
+  cyfunc = function(d, i) { return (Math.sin(2*Math.PI/d.length*i + Math.PI) * 50) + "pt"; }
+  
+  children.each(function(d, i) {
+    if(d.x0 == null) {
+      d.x0 = cxfunc(d, i);
+      d.y0 = cyfunc(d,i);
+    }
+  });
+  
+  children.style("transform", function(d, i) { return "translate("+d.x0+", "+d.y0+")"; } );
+}
+
+function reset_super_positions(superfeat) {
+  superfeat.attr("transform", function(d) { return "translate("+d.x0+","+d.y0+") scale(0.5, 0.5)"; });
+}
+
+function check_childdrag(child) {
+  var datum = child.datum();
+  
+  if(datum.y > 170) {
+    // remove category, update results, update bullets
+//    child.remove();
+    d3.select("#"+datum.parent.feature)
+    
+    selection.push(datum.self.feature);
+    
+    change_backstyle(datum.self.feature);
+    
+    var x = 100 + selection.length*100;
+    var y = 275;
+    
+    d3.select("svg").append("circle")
+        .attr("cx", x + 37)
+        .attr("cy", y + 37)
+        .attr("r", "37px")
+        .attr("stroke", "gray")
+        .attr("fill", "white");
+        
+    d3.select("svg").append("image")
+        .attr("xlink:href", "feature/"+datum.self.feature+".png" )
+        .attr("x", x)
+        .attr("y", y)
+        .attr("width", "75px")
+        .attr("height", "75px");
+    
+    
+    
+    d3.timer(function() {
+      order_bullets(); 
+      d3.timer(order_results, 0.5);
+      return true;
+    });
+    
+  } else {
+    // reset position
+    reset_children_positions(child);
+  }
+}
+
+function check_superdrag(superfeat) {
+  
+}
+
+function update_bullets(features) {
+  // drag
+  var superdrag = d3.behavior.drag();
+  var childdrag = d3.behavior.drag();
+  
+  childdrag.on("drag", function(d) {
+    d.x = d3.event.x;
+    d.y = d3.event.y;
+    
+    d3.select(this).style("transform", "translate("+d.x+"px,"+d.y+"px)");
+  });
+  childdrag.on("dragstart", function(d) {
+    self = d3.select(this);
+    if(no_children(self) == false) {
+        return;
+    }
+    
+    d3.event.sourceEvent.stopPropagation();
+  });
+  childdrag.on("dragend", function(d) {
+    self = d3.select(this);
+    
+    check_childdrag(self);
+  });
+  
+  superdrag.on("drag", function(d) {
+    self = d3.select(this);
+    if(no_children(self) == false) {
+      return;
+    }
+    d.x = d3.event.x;
+    d.y = d3.event.y;
+    
+    d3.select(this).style("transform", "translate("+d.x+"px,"+d.y+"px)");
+  });
+  superdrag.on("dragstart", function(d) {
+    self = d3.select(this);
+    if(no_children(self)) {
+      d3.event.sourceEvent.stopPropagation();
+    }
+  });
+  superdrag.on("dragend", function(d) {
+    self = d3.select(this);
+    if(no_children(self) == false) {
+      return;
+    }
+    
+    check_superdrag(self);
+  });
+  
+  var superfeat = d3.select("#available").selectAll("g.superfeat").data(features);
+
+  /// create superfeature: group, circle and image ///
+  var superfeat_enter = superfeat.enter().append("g")
+    .classed("superfeat", true)
+    .call(superdrag);
+
+
+  superfeat_enter.append("circle")
+    .classed("parent", true)
+    .attr("r", "37px")
+    .attr("stroke", "gray")
+    .attr("fill", "white");
+   
+  superfeat_enter.append("circle")
+    .classed("hidden", true)
+    .attr("r", "50px")
+    .attr("stroke", "none")
+    .attr("fill", "transparent");
+    
+  superfeat_enter.append("image")
+    .classed("parent", true);
+
+  /// update superfeature ///
+  superfeat
+    .each(function(d, i) {
+      d.x0 = 150+i*215;
+      d.y0 = 100;
+    })
+    .attr("id", function(d) { return d.feature; })
+    .attr("transform", function(d, i) { return "translate("+d.x0+","+d.y0+")"; })
+    .on("mouseover", function(d) { show_mode(d.feature, true); } )
+    .on("mouseleave", function(d) { show_mode(d.feature, false); });
+
+  superfeat.select("image.parent")
+    .attr("xlink:href", function(d) {return "feature/"+d.feature+".png"; })
+    .attr("x", "-37px")
+    .attr("y", "-37px")
+    .attr("width", "75px")
+    .attr("height", "75px");
+  
+  superfeat.exit().remove();
+
+  /// create child features: group, circle and image. ///
+  /// child data is a dict with keys 'self' and 'parent' which are just feature identifiers
+  var children = superfeat.selectAll("g.child").data(function(d) {
+    return d.children.map(function(x) {
+      // x0, y0 will be set initially by reset_positions
+      return {"self": x, "parent": d, "length": d.children.length, "x0": null, "y0": null};
+    });
+  });
+  
+  
+  var children_enter = children.enter().append("g")
+    .classed("child", true)
+    .style("opacity", 0)
+    .call(childdrag);
+
+
+
+  children_enter.append("circle")
+    .attr("r", "37px")
+    .attr("stroke", "gray")
+    .attr("fill", "white");
+  
+  children_enter.append("image");
+
+    
+  children.select("image")
+    .attr("xlink:href", function(d, i) { return "feature/"+d.self.feature+".png"; })
+    .attr("x", "-37px")
+    .attr("y", "-37px")
+    .attr("width", "75px")
+    .attr("height", "75px")
+    .each(function(d) { show_mode(d.parent.feature, false); });
+  
+  children.exit().remove();
+    
+    
+  /// update child features ///
+  reset_children_positions(children);
+}
+
+function order_results() {
+  var url = encode_selected();
+  d3.json("get_results?"+url, function(err, data) {
+    d3.select("#numavail").text(data.count);
+    var elems = d3.select("#results").selectAll("div").data(data.cars.slice(0, 10));
+    var elems_enter = elems.enter().append("div");
+    elems_enter.style("display", "inline");
+    
+    // 2048x1536
+    elems_enter.append("a").append("img");
+    
+    elems.select("a")
+      .attr("href", function(d) { return "image/"+d.vin; })
+      .attr("target", "_blank");
+      
+    elems.select("a img")
+      .attr("src", function(d) { return "image/"+d.vin; })
+      .style("width", "220px");
+    
+    elems.exit().remove();
+  });
+  
+  return true;
+}
+
+function order_bullets() {
+  d3.json("get_bullets?"+encode_selected(), function(err, data) { update_bullets(data.features); });
+  
+  return true;
+}
+
+d3.timer(order_bullets);
+d3.timer(order_results);
+
+</script>
+</body>
+</html>
