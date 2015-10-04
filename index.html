@@ -198,8 +198,13 @@ function check_childdrag(child) {
     
     
     d3.timer(function() {
-      order_bullets(); 
-      d3.timer(order_results, 0.5);
+      d3.json("get_bullets?"+encode_selected(), function(err, data) {
+        update_bullets(data.features);
+        d3.timer(function() {
+            order_results();
+            return true;
+        }, 1);
+      });
       return true;
     });
     
