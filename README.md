@@ -5,4 +5,4 @@
 
 Our submission to the 2015 HackZurich. 
 Currently being considered for implementation as an optional search method on the official amag website.
-[Give it a try !](http://46.101.106.1:8080)
+
